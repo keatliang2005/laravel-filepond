@@ -5,6 +5,7 @@ namespace Sopamo\LaravelFilepond\Http\Controllers;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Validation\ValidationException;
 use Sopamo\LaravelFilepond\Filepond;
 
 class FilepondController extends BaseController
@@ -24,16 +25,28 @@ class FilepondController extends BaseController
      * Uploads the file to the temporary directory
      * and returns an encrypted path to the file
      *
-     * @param Request $request
+     * @param  Request  $request
      * @return \Illuminate\Http\Response
      */
     public function upload(Request $request)
     {
+        try {
+            $request->validate([
+                config('filepond.input_name') => config('filepond.input_rule')
+            ]);
+        } catch (ValidationException $exception) {
+            return $request->wantsJson() ?
+                Response::json($exception->errors(), 422) :
+                Response::make(json_encode($exception->errors()), 422, [
+                    'Content-Type' => 'text/plain',
+                ]);
+        }
+
         $input = $request->file(config('filepond.input_name'));
         $file = is_array($input) ? $input[0] : $input;
-        
-        if($input == null){
-            return Response::make(config('filepond.input_name'). ' is required', 422, [
+
+        if ($input == null) {
+            return Response::make(config('filepond.input_name').' is required', 422, [
                 'Content-Type' => 'text/plain',
             ]);
         }
@@ -41,7 +54,7 @@ class FilepondController extends BaseController
         $tempPath = config('filepond.temporary_files_path');
 
         $filePath = @tempnam($tempPath, 'laravel-filepond');
-        $filePath .= '.' . $file->extension();
+        $filePath .= '.'.$file->extension();
 
         $filePathParts = pathinfo($filePath);
 
@@ -60,13 +73,13 @@ class FilepondController extends BaseController
      * Takes the given encrypted filepath and deletes
      * it if it hasn't been tampered with
      *
-     * @param Request $request
+     * @param  Request  $request
      * @return mixed
      */
     public function delete(Request $request)
     {
         $filePath = $this->filepond->getPathFromServerId($request->getContent());
-        if(unlink($filePath)) {
+        if (unlink($filePath)) {
             return Response::make('', 200, [
                 'Content-Type' => 'text/plain',
             ]);

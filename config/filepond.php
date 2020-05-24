@@ -9,7 +9,7 @@ return [
     | The middleware to append to the filepond API routes
     |
     */
-    'middleware' => 'api',
+    'middleware' => ['api', 'auth:sanctum'],
 
     /*
     |--------------------------------------------------------------------------
@@ -21,4 +21,7 @@ return [
     */
     'temporary_files_path' => realpath(sys_get_temp_dir()),
     'input_name' => 'file',
+    'input_rule' => [
+        'required', 'file', 'mimes:jpeg,jpg,heic,bmp,png,pdf,doc,docx',
+    ],
 ];
